@@ -1,0 +1,293 @@
+# Default values for public-pool.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+
+frontend:
+  image:
+    repository: sethforprivacy/public-pool
+    tag: 5ffea44
+    pullPolicy: IfNotPresent
+
+  strategyType: Recreate
+
+  imagePullSecrets: []
+  nameOverride: ""
+  fullnameOverride: ""
+
+  # env:
+  #   ENV1: "value1"
+  #   ENV2: "value2"
+
+  arguments:
+    # Send trace/debug info to console instead of debug.log file
+    # - -printtoconsole
+
+  podSecurityContext: {}
+    # fsGroup: 2000
+
+  securityContext:
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+
+  service:
+    enabled: true
+
+    annotations: {}
+    labels: {}
+    ## Deprecated, instead simply do not provide a clusterIP value
+    omitClusterIP: false
+    # clusterIP: ""
+
+    ## List of IP addresses at which the controller services are available
+    ## Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
+    ##
+    externalIPs: []
+
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+
+    ## Set external traffic policy to: "Local" to preserve source IP on
+    ## providers supporting it
+    ## Ref: https://kubernetes.io/docs/tutorials/services/source-ip/#source-ip-for-services-with-typeloadbalancer
+    externalTrafficPolicy: ""
+
+    # Must be either "None" or "ClientIP" if set. Kubernetes will default to "None".
+    # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
+    sessionAffinity: ""
+
+    healthCheckNodePort: 0
+
+    tcpPort: 8080
+  
+  ingress:
+    enabled: false
+    # For Kubernetes >= 1.18 you should specify the ingress-controller via the field ingressClassName
+    # See https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#specifying-the-class-of-an-ingress
+    # ingressClassName: nginx
+    # Values can be templated
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    labels: {}
+    path: /
+
+    # pathType is only for k8s >= 1.1=
+    pathType: Prefix
+
+    hosts:
+      - chart-example.local
+    ## Extra paths to prepend to every host configuration. This is useful when working with annotation based services.
+    extraPaths: []
+    # - path: /*
+    #   backend:
+    #     serviceName: ssl-redirect
+    #     servicePort: use-annotation
+    ## Or for k8s > 1.19
+    # - path: /*
+    #   pathType: Prefix
+    #   backend:
+    #     service:
+    #       name: ssl-redirect
+    #       port:
+    #         name: use-annotation
+
+
+  persistence:
+    enabled: false
+    ## public-pool data Persistent Volume Storage Class
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    # storageClass: "-"
+    ##
+    ## If you want to reuse an existing claim, you can pass the name of the PVC using
+    ## the existingClaim variable
+    # existingClaim: your-claim
+    ##
+    ## If you want to use a volume on the host machine instead of a PVC:
+    # hostPath: /path/to/the/config/folder
+    accessMode: ReadWriteOnce
+    size: 5Gi
+
+    tls: []
+    #  - secretName: public-pool-tls
+    #    hosts:
+    #      - public-pool.local
+
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+backend:
+  image:
+    repository: sethforprivacy/public-pool
+    tag: 20798ec
+    pullPolicy: IfNotPresent
+
+  strategyType: Recreate
+
+  imagePullSecrets: []
+  nameOverride: ""
+  fullnameOverride: ""
+
+  env:
+    # bitcoin node running in your private network 192.168.1.0/24
+    BITCOIN_RPC_URL: "http://192.168.1.100"
+
+    # bitcoin node running undockered on the same PC
+    # needs to add rpcallowip=172.16.0.0/12 to your bitcoin.conf
+    #BITCOIN_RPC_URL=http://host.docker.internal
+
+    BITCOIN_RPC_USER: "rpcuser"
+    BITCOIN_RPC_PASSWORD: "hunter1"
+    BITCOIN_RPC_PORT: "8332"
+    BITCOIN_RPC_TIMEOUT: "10000"
+
+    # You can use this instead of BITCOIN_RPC_USER and BITCOIN_RPC_PASSWORD
+    #BITCOIN_RPC_COOKIEFILE=
+
+    # Enable in bitcoin.conf with
+    # zmqpubrawblock=tcp://*:3000
+    # BITCOIN_ZMQ_HOST="tcp://192.168.1.100:3000"
+
+    API_PORT: "3334"
+    STRATUM_PORT: "3333"
+
+    #optional telegram bot
+    #TELEGRAM_BOT_TOKEN=
+
+    #optional discord bot
+    #DISCORD_BOT_CLIENTID=
+    #DISCORD_BOT_GUILD_ID=
+    #DISCORD_BOT_CHANNEL_ID=
+
+    #optional
+    #DEV_FEE_ADDRESS=
+    # mainnet | testnet
+    NETWORK: "mainnet"
+
+    API_SECURE: "false"
+    # Default is "public-pool", you can change it to any string it will be removed if it will make the block or coinbase script too big
+    POOL_IDENTIFIER: "public-pool"
+  
+  # This secret can contain environment variables such as BITCOIN_RPC_PASSWORD. Useful for using with a secrets manager like SOPS.
+  #
+  # Example:
+  #  kubectl create secret generic public-pool-space-env-vars --from-literal=BITCOIN_RPC_PASSWORD=thecoreprcpassword
+  #
+  # The above example would then use "public-pool-space-env-vars" in envExternalSecretName
+  envExternalSecretName: ""
+
+  arguments:
+    # Send trace/debug info to console instead of debug.log file
+    # - -printtoconsole
+
+  podSecurityContext: {}
+    # fsGroup: 2000
+
+  securityContext:
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+
+  service:
+    enabled: true
+
+    annotations: {}
+    labels: {}
+    ## Deprecated, instead simply do not provide a clusterIP value
+    omitClusterIP: false
+    # clusterIP: ""
+
+    ## List of IP addresses at which the controller services are available
+    ## Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
+    ##
+    externalIPs: []
+
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+
+    ## Set external traffic policy to: "Local" to preserve source IP on
+    ## providers supporting it
+    ## Ref: https://kubernetes.io/docs/tutorials/services/source-ip/#source-ip-for-services-with-typeloadbalancer
+    externalTrafficPolicy: ""
+
+    # Must be either "None" or "ClientIP" if set. Kubernetes will default to "None".
+    # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
+    sessionAffinity: ""
+
+    healthCheckNodePort: 0
+
+    tcpPort: 8999
+
+  persistence:
+    enabled: false
+    ## public-pool data Persistent Volume Storage Class
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    # storageClass: "-"
+    ##
+    ## If you want to reuse an existing claim, you can pass the name of the PVC using
+    ## the existingClaim variable
+    # existingClaim: your-claim
+    ##
+    ## If you want to use a volume on the host machine instead of a PVC:
+    # hostPath: /path/to/the/config/folder
+    accessMode: ReadWriteOnce
+    size: 5Gi
+
+    tls: []
+    #  - secretName: public-pool-tls
+    #    hosts:
+    #      - public-pool.local
+
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
